@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DAVIS-MONTHAN 309th AMARG // SAR + Optical 3D Geospatial Twin</title>
+  <link rel="stylesheet" href="./style.css" />
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.164.1/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.164.1/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <!-- 3D WebGL & CSS2D Viewport Container -->
+  <div id="viewport-container">
+    <canvas id="webgl-canvas"></canvas>
+    <div id="css2d-layer"></div>
+  </div>
+
+  <!-- Floating Hover Tooltip for 3D Vector Polygons -->
+  <div id="vector-tooltip" class="vector-tooltip glass-panel hidden">
+    <div class="tooltip-top">
+      <span id="tt-cat-dot" class="cat-dot"></span>
+      <span id="tt-category" class="tt-category">AIRCRAFT SECTOR</span>
+    </div>
+    <div id="tt-name" class="tt-name">B-52 Stratofortress Row</div>
+    <div id="tt-sub" class="tt-sub">Boeing B-52G/H Stratofortress</div>
+    <div class="tt-hint">Click polygon to inspect full dossier</div>
+  </div>
+
+  <!-- Loading Overlay -->
+  <div id="loading-overlay" class="loading-overlay">
+    <div class="loader-card glass-panel">
+      <div class="loader-header">
+        <span class="status-dot pulse"></span>
+        <span class="loader-tag">UMBRA X-BAND SPOTLIGHT // USGS 3DEP 1M // NAIP // OSM</span>
+      </div>
+      <h1 class="loader-title">309th AMARG 3D SAR Explorer</h1>
+      <p class="loader-subtitle">Initializing harmonized UTM Zone 12N terrain, 220,000-point X-band backscatter cloud &amp; 3D vector overlays...</p>
+      <div class="progress-track">
+        <div id="loading-bar" class="progress-fill" style="width: 8%;"></div>
+      </div>
+      <div id="loading-status" class="loader-status">Fetching site_manifest.json...</div>
+    </div>
+  </div>
+
+  <!-- Top Navigation & Mode Controller -->
+  <header class="hud-top">
+    <div class="brand-badge glass-panel">
+      <div class="brand-emblem">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8">
+          <circle cx="12" cy="12" r="9" stroke-dasharray="4 2" />
+          <path d="M12 3v18M3 12h18" stroke-opacity="0.45" />
+          <circle cx="12" cy="12" r="3" fill="currentColor" />
+        </svg>
+      </div>
+      <div class="brand-text">
+        <div class="brand-eyebrow">DAVIS-MONTHAN AFB // TUCSON, AZ</div>
+        <div class="brand-name">309th AMARG Aircraft Boneyard</div>
+      </div>
+    </div>
+
+    <!-- Primary 3-Mode Visual Controller -->
+    <nav class="mode-switcher glass-panel" role="tablist" aria-label="Visualization Mode">
+      <button id="mode-optical" class="mode-btn" data-mode="optical" role="tab" aria-selected="false">
+        <span class="mode-icon">◈</span>
+        <span>Optical 3D</span>
+      </button>
+      <button id="mode-sar" class="mode-btn" data-mode="sar" role="tab" aria-selected="false">
+        <span class="mode-icon">✦</span>
+        <span>SAR Point Cloud</span>
+      </button>
+      <button id="mode-xray" class="mode-btn active" data-mode="xray" role="tab" aria-selected="true">
+        <span class="mode-icon">◫</span>
+        <span>X-Ray / Spatial Wipe</span>
+      </button>
+    </nav>
+
+    <!-- Vector Overlays Toggle, Camera Controls & Mission Briefing Button -->
+    <div class="camera-controls glass-panel">
+      <label class="vector-toggle-pill active" id="vector-toggle-label" title="Toggle 3D Vector Footprints (Aircraft Sectors, Hangars, Tarmac)">
+        <input id="toggle-vectors" type="checkbox" checked />
+        <span class="vec-indicator"></span>
+        <span>Vector Overlays</span>
+      </label>
+
+      <button id="btn-free-orbit" class="cam-btn active" title="Free Orbit / Pan / Zoom">
+        <span>Free Orbit</span>
+      </button>
+      <button id="btn-guided-tour" class="cam-btn" title="Automated Guided Tour Spline">
+        <span class="tour-dot"></span>
+        <span>Guided Tour</span>
+      </button>
+      <button id="btn-reset-cam" class="cam-btn icon-only" title="Reset Orbital View">
+        ↺
+      </button>
+      <button id="btn-about-modal" class="cam-btn briefing-btn" title="Open Mission Briefing &amp; SAR Interpretation Guide">
+        <span class="info-badge">[i]</span>
+        <span>Mission Briefing / About</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- X-Ray Spatial Wipe Controller Bar (shown in X-Ray mode) -->
+  <div id="xray-controls" class="xray-bar glass-panel">
+    <div class="xray-labels">
+      <span class="xray-tag optical-tag">◀ OPTICAL PBR MESH</span>
+      <span class="xray-title">SPATIAL WIPE PLANE</span>
+      <span class="xray-tag sar-tag">SAR X-BAND CLOUD ▶</span>
+    </div>
+    <div class="xray-slider-row">
+      <input id="wipe-slider" type="range" min="0" max="100" value="50" step="0.5" aria-label="Spatial Wipe Position" />
+      <label class="cursor-follow-toggle" title="Move split plane with mouse cursor">
+        <input id="cursor-wipe-checkbox" type="checkbox" />
+        <span>Cursor Wipe</span>
+      </label>
+    </div>
+  </div>
+
+  <!-- Left Collapsible Telemetry & Sensor Physics HUD -->
+  <aside id="telemetry-panel" class="telemetry-panel glass-panel">
+    <div class="panel-header">
+      <div class="panel-title-group">
+        <span class="status-dot"></span>
+        <h2>SAR SENSOR TELEMETRY</h2>
+      </div>
+      <button id="toggle-telemetry" class="collapse-btn" aria-label="Toggle Telemetry Panel" title="Collapse/Expand">
+        −
+      </button>
+    </div>
+
+    <div id="telemetry-body" class="panel-body">
+      <div class="telemetry-grid">
+        <div class="telemetry-item">
+          <span class="tel-label">SENSOR</span>
+          <span id="tel-sensor" class="tel-value">Umbra X-band Spotlight</span>
+        </div>
+        <div class="telemetry-item">
+          <span class="tel-label">GRAZING / INCIDENCE</span>
+          <span id="tel-grazing" class="tel-value accent">~35° (60.1° Collect)</span>
+        </div>
+        <div class="telemetry-item">
+          <span class="tel-label">LOOK AZIMUTH</span>
+          <span id="tel-azimuth" class="tel-value accent">242° (287.2° View)</span>
+        </div>
+        <div class="telemetry-item">
+          <span class="tel-label">RESOLUTION</span>
+          <span id="tel-resolution" class="tel-value">25cm (50cm GEC Grid)</span>
+        </div>
+        <div class="telemetry-item">
+          <span class="tel-label">POLARIZATION / BAND</span>
+          <span id="tel-pol" class="tel-value">VV // 9.73 GHz (λ 3.08cm)</span>
+        </div>
+        <div class="telemetry-item">
+          <span class="tel-label">HARMONIZED CRS</span>
+          <span id="tel-crs" class="tel-value">WGS 84 / UTM 12N (32612)</span>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Vector Layer Legend, Live Aircraft Count & Category Filters -->
+      <div class="vector-legend-section">
+        <div class="section-caption">OPTICAL + SAR AIRCRAFT INVENTORY (<span id="vec-count-badge">500</span> AIRCRAFT)</div>
+        <div class="inventory-stats-row">
+          <div class="inv-stat">
+            <span class="inv-num" id="inv-aircraft-count">500</span>
+            <span class="inv-lbl">Individual Airframes</span>
+          </div>
+          <div class="inv-stat">
+            <span class="inv-num" id="inv-comp-count">78</span>
+            <span class="inv-lbl">Sub-Components</span>
+          </div>
+          <div class="inv-stat">
+            <span class="inv-num" id="inv-hangar-count">27</span>
+            <span class="inv-lbl">Base Hangars</span>
+          </div>
+        </div>
+        <div class="vec-filter-row">
+          <label class="vec-chip chip-aircraft">
+            <input type="checkbox" data-vec-cat="aircraft_sector" checked />
+            <span class="chip-swatch swatch-aircraft"></span>
+            <span>Aircraft Outlines</span>
+          </label>
+          <label class="vec-chip chip-comp">
+            <input type="checkbox" data-vec-cat="aircraft_component" checked />
+            <span class="chip-swatch swatch-comp"></span>
+            <span>Components (Wing/Tail/Nose)</span>
+          </label>
+          <label class="vec-chip chip-hangar">
+            <input type="checkbox" data-vec-cat="hangar" checked />
+            <span class="chip-swatch swatch-hangar"></span>
+            <span>Hangars</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Real-Time Shader & Point Cloud Controls -->
+      <div class="control-section">
+        <div class="control-header">
+          <span>POINT CLOUD SIZE</span>
+          <span id="val-pt-size" class="mono-val">0.040</span>
+        </div>
+        <input id="slider-pt-size" type="range" min="0.015" max="0.09" step="0.005" value="0.04" />
+
+        <div class="control-header">
+          <span>RADAR BLOOM / GAIN</span>
+          <span id="val-bloom" class="mono-val">1.15×</span>
+        </div>
+        <input id="slider-bloom" type="range" min="0.2" max="2.5" step="0.05" value="1.15" />
+
+        <div class="control-header">
+          <span>SOLAR ELEVATION (TUCSON)</span>
+          <span id="val-sun" class="mono-val">38°</span>
+        </div>
+        <input id="slider-sun" type="range" min="8" max="80" step="1" value="38" />
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Quick Jump to Physics Annotations -->
+      <div class="poi-list-section">
+        <div class="section-caption">RADAR SCATTERING PHENOMENA</div>
+        <div id="annotation-buttons" class="poi-btn-list">
+          <!-- Populated dynamically from site_manifest.json -->
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Right Floating Educational & Vector Dossier Inspector Card -->
+  <aside id="inspector-card" class="inspector-card glass-panel">
+    <div class="inspector-top">
+      <span id="insp-code" class="insp-badge">SAR-01</span>
+      <button id="close-inspector" class="close-btn" title="Close Inspector">×</button>
+    </div>
+    <h3 id="insp-title" class="insp-title">Dihedral Reflection</h3>
+    <div id="insp-subtitle" class="insp-subtitle">Double-Bounce Corner Reflector Saturation</div>
+    <p id="insp-desc" class="insp-desc">
+      Right-angled intersections between aircraft fuselages, wing roots, and vertical stabilizers act as retrodirective corner reflectors, returning phase-coherent X-band energy directly to the satellite receiver.
+    </p>
+    <div id="insp-metrics" class="insp-metrics"></div>
+    <div class="insp-actions">
+      <button id="insp-prev" class="step-btn">◀ Prev Phenomenon</button>
+      <button id="insp-next" class="step-btn primary">Next Phenomenon ▶</button>
+    </div>
+  </aside>
+
+  <!-- Expandable "Mission Briefing / About This App" Modal Drawer -->
+  <div id="about-modal-backdrop" class="about-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="about-modal-title">
+    <div class="about-modal glass-panel">
+      <div class="about-header">
+        <div>
+          <div class="about-eyebrow">MISSION BRIEFING // SYSTEM DOCUMENTATION &amp; SAR INTERPRETATION GUIDE</div>
+          <h2 id="about-modal-title" class="about-title">Davis-Monthan AFB (309th AMARG) 3D Geospatial Twin</h2>
+        </div>
+        <button id="close-about-modal" class="close-btn large" title="Close Mission Briefing">×</button>
+      </div>
+
+      <div class="about-content">
+        <!-- 1. Overview -->
+        <section class="about-section">
+          <h3>1. Mission Overview</h3>
+          <p>
+            This application is an interactive 3D digital twin comparing sub-meter spaceborne
+            <strong>Synthetic Aperture Radar (SAR)</strong> backscatter with true-color optical aerial photography
+            draped over bare-earth LiDAR terrain at <strong>Davis-Monthan Air Force Base's 309th Aerospace Maintenance and Regeneration Group (AMARG)</strong>—the world's largest military aircraft preservation and reclamation facility in Tucson, Arizona.
+          </p>
+          <p>
+            Unlike passive optical cameras that rely on sunlight and measure surface color, an active X-band radar satellite transmits its own microwave pulses ($\lambda \approx 3.08\text{ cm}$) and measures the amplitude, phase, and slant-range travel time of the backscattered echo—revealing surface roughness, metallic geometry, and structural height day or night in all weather.
+          </p>
+        </section>
+
+        <!-- 2. Data Attribution -->
+        <section class="about-section">
+          <h3>2. Primary Data Attribution &amp; Harmonization Pipeline</h3>
+          <div class="attribution-grid">
+            <div class="attr-card">
+              <div class="attr-tag">SPACEBORNE RADAR</div>
+              <div class="attr-name">Umbra Space Open Data Program</div>
+              <p>X-Band Spotlight SAR (<code>Umbra-10</code>, VV polarization, 9.73 GHz, ~25cm impulse / 50cm GEC product, grazing angle ~35° nominal / 60.1° collect), radiometrically calibrated to $\sigma_0$ decibels ($[-25\text{ dB}, +5\text{ dB}]$).</p>
+            </div>
+            <div class="attr-card">
+              <div class="attr-tag">BARE-EARTH ELEVATION</div>
+              <div class="attr-name">USGS 3DEP 1-Meter LiDAR DTM</div>
+              <p>Pima County 1-meter Digital Elevation Model (<code>EPSG:32612</code> / UTM Zone 12N, $807.9\text{ m} - 851.3\text{ m}$ NAVD88), co-registered 1:1 with SAR and optical rasters.</p>
+            </div>
+            <div class="attr-card">
+              <div class="attr-tag">OPTICAL BASEMAP</div>
+              <div class="attr-name">High-Resolution Public Orthophoto</div>
+              <p>USGS National Agriculture Imagery Program (NAIP) 30cm true-color RGB aerial orthophoto fused with SAR-derived PBR metalness &amp; surface roughness maps.</p>
+            </div>
+            <div class="attr-card">
+              <div class="attr-tag">3D VECTOR OVERLAYS</div>
+              <div class="attr-name">OpenStreetMap &amp; Overture Maps</div>
+              <p>Co-registered hangar footprints, towways, and oriented aircraft storage sectors draped over the displaced 3D terrain mesh with a $+0.2\text{ m}$ elevation offset.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- 3. Interactive Legend & SAR Interpretation Guide -->
+        <section class="about-section">
+          <h3>3. Interactive Legend &amp; SAR Scattering Interpretation Guide</h3>
+          <div class="guide-list">
+            <div class="guide-item">
+              <span class="guide-swatch dihedral-swatch"></span>
+              <div>
+                <strong>Dihedral Double-Bounce Reflections (Saturated Cyan-White / Gold):</strong>
+                Right-angled ($90^\circ$) junctions between aircraft fuselages, wing roots, engine nacelles, and the desert floor act as retrodirective corner reflectors. Radar energy bounces twice and returns directly toward the satellite receiver, saturating the upper decibel range ($0\text{ to }+5\text{ dB}$).
+              </div>
+            </div>
+            <div class="guide-item">
+              <span class="guide-swatch shadow-swatch"></span>
+              <div>
+                <strong>Radar Shadow Voids (Pitch-Black Wedges Behind Airframes):</strong>
+                Because SAR illuminates the ground obliquely from the side, tall vertical stabilizers (like B-52H and C-5 Galaxy tail fins) block microwave pulses from reaching the ground behind them. The shadow length $L$ directly reveals true structure height via $H = L \cdot \tan(\theta_{\text{grazing}})$.
+              </div>
+            </div>
+            <div class="guide-item">
+              <span class="guide-swatch specular-swatch"></span>
+              <div>
+                <strong>Specular Ground Scattering (Dark Tarmac &amp; Towways):</strong>
+                At X-band wavelength ($3.08\text{ cm}$), paved asphalt taxiways, concrete aprons, and graded caliche hardpan are smoother than the Rayleigh roughness criterion. Incoming radar energy reflects forward away from the sensor like a mirror, making flat pavement appear pitch black ($<-21\text{ dB}$).
+              </div>
+            </div>
+          </div>
+
+          <div class="vector-key-bar">
+            <div class="vkey-item"><span class="vkey-line amber"></span> <strong>#ff9900 Electric Amber:</strong> Aircraft Storage Sectors &amp; High-Profile Airframes</div>
+            <div class="vkey-item"><span class="vkey-line cyan"></span> <strong>#00e5ff Tactical Cyan:</strong> Preservation Hangars &amp; Base Facilities</div>
+            <div class="vkey-item"><span class="vkey-line slate"></span> <strong>#8899a6 Slate White:</strong> Runways, Aprons &amp; Towway Infrastructure</div>
+          </div>
+        </section>
+
+        <!-- 4. Controls Cheat Sheet -->
+        <section class="about-section">
+          <h3>4. Interactive Controls &amp; Shortcuts Cheat Sheet</h3>
+          <div class="controls-grid">
+            <div class="ctrl-item"><kbd>Left Drag</kbd> <span>Orbit 3D Camera</span></div>
+            <div class="ctrl-item"><kbd>Right Drag</kbd> <span>Pan Across Terrain</span></div>
+            <div class="ctrl-item"><kbd>Scroll Wheel</kbd> <span>Zoom In / Out (1.2m – 3.6km)</span></div>
+            <div class="ctrl-item"><kbd>Click Polygon / Pin</kbd> <span>Inspect Airframe Sector or SAR Phenomenon</span></div>
+            <div class="ctrl-item"><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> <span>Switch Optical / SAR Cloud / X-Ray Wipe</span></div>
+            <div class="ctrl-item"><kbd>V</kbd> / <kbd>T</kbd> / <kbd>I</kbd> <span>Toggle Vectors / Guided Tour / Briefing</span></div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Guided Tour & Live Cursor Coordinate Bar -->
+  <footer class="hud-bottom">
+    <div id="tour-banner" class="tour-banner glass-panel hidden">
+      <div class="tour-info">
+        <span class="tour-step-badge" id="tour-step-index">TOUR 1 / 4</span>
+        <div>
+          <div id="tour-step-title" class="tour-title">309th AMARG Overview</div>
+          <div id="tour-step-caption" class="tour-caption">Wide orbital perspective of the Davis-Monthan aircraft boneyard.</div>
+        </div>
+      </div>
+      <div class="tour-actions">
+        <button id="tour-prev" class="cam-btn">◀</button>
+        <button id="tour-pause" class="cam-btn">Pause</button>
+        <button id="tour-next" class="cam-btn">▶</button>
+      </div>
+    </div>
+
+    <div class="status-pill glass-panel">
+      <span id="cursor-coords">UTM 12N: 514,560 E / 3,558,595 N // ELEV: 829.4 m</span>
+      <span class="sep">|</span>
+      <span id="fps-counter">60 FPS</span>
+    </div>
+  </footer>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

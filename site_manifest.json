@@ -1,0 +1,179 @@
+{
+  "site": "Davis-Monthan AFB / 309th AMARG (Aircraft Boneyard)",
+  "location": "Tucson, Arizona, USA",
+  "coordinates_wgs84": {
+    "lat": 32.1615,
+    "lon": -110.848
+  },
+  "crs": "EPSG:32612 (WGS 84 / UTM Zone 12N)",
+  "world_scale": {
+    "world_units_x": 20.0,
+    "world_units_z": 20.0,
+    "meters_per_unit": 100.0,
+    "vertical_exaggeration": 2.8,
+    "elevation_min_m": 821.56,
+    "elevation_max_m": 845.8,
+    "elevation_mean_m": 834.11
+  },
+  "telemetry": {
+    "sensor": "Umbra X-Band Spotlight SAR (Umbra-10)",
+    "capture_utc": "2025-01-21T18:35:42.200000Z",
+    "grazing_angle_deg": 60.12,
+    "incidence_angle_deg": 29.88,
+    "azimuth_angle_deg": 287.17,
+    "sensor_look_azimuth_deg": 107.17,
+    "display_grazing": "~35\u00b0 (Nominal) / 60.1\u00b0 (Actual Collect)",
+    "display_azimuth": "242\u00b0 (Nominal) / 287.2\u00b0 (View Azimuth)",
+    "display_resolution": "25cm (Spotlight Impulse) / 50cm (Harmonized GEC)",
+    "polarization": "VV",
+    "center_frequency_ghz": 9.73,
+    "slant_range_km": 652.7,
+    "point_count": 220000,
+    "mesh_triangles": 130050
+  },
+  "annotations": [
+    {
+      "id": "dihedral-reflection",
+      "code": "SAR-01",
+      "title": "Dihedral Reflection",
+      "subtitle": "Double-Bounce Corner Reflector Saturation",
+      "position": [
+        -4.609,
+        0.193,
+        2.453
+      ],
+      "camera_Position": [
+        -1.809,
+        2.393,
+        5.253
+      ],
+      "metrics": {
+        "Peak Backscatter": "+0.0 dB (65,535 DN)",
+        "Mechanism": "90\u00b0 Wing-Fuselage / Nacelle Corner",
+        "Wavelength": "3.08 cm (X-Band 9.73 GHz)"
+      },
+      "description": "Right-angled intersections between aircraft fuselages, wing roots, pylons, and vertical stabilizers act as retrodirective dihedral and trihedral corner reflectors. Incoming X-band radar pulses bounce twice off orthogonal aluminum skins and return phase-coherently directly toward the Umbra receiver, saturating the dynamic range (+0 to +5 dB)."
+    },
+    {
+      "id": "radar-shadow-void",
+      "code": "SAR-02",
+      "title": "Radar Shadow Void",
+      "subtitle": "Slant-Range Occlusion & Fin Height Mensuration",
+      "position": [
+        4.274,
+        0.293,
+        3.343
+      ],
+      "camera_Position": [
+        1.674,
+        2.293,
+        5.943
+      ],
+      "metrics": {
+        "Shadow Backscatter": "<-24.0 dB (Noise Floor)",
+        "Height Formula": "H = L_shadow \u00d7 tan(\u03b8_grazing)",
+        "Look Geometry": "Left-Looking Descending Pass"
+      },
+      "description": "Because Synthetic Aperture Radar is an active side-looking sensor, tall airframe structures (such as B-52H and C-5 Galaxy tail fins) block microwave illumination down-range. The length of the resulting pitch-black radar shadow void (L) directly reveals vertical structure height via H = L \u00d7 tan(grazing_angle)."
+    },
+    {
+      "id": "specular-ground-scatter",
+      "code": "SAR-03",
+      "title": "Specular Ground Scatter",
+      "subtitle": "Mirror-Like Forward Reflection on Smooth Tarmac",
+      "position": [
+        -0.033,
+        0.192,
+        3.748
+      ],
+      "camera_Position": [
+        2.467,
+        2.092,
+        1.248
+      ],
+      "metrics": {
+        "Surface Roughness": "h_rms < 0.38 cm (Rayleigh Smooth)",
+        "Return Level": "-21.5 to -24.1 dB",
+        "Contrast Ratio": ">22 dB below Airframe Returns"
+      },
+      "description": "At X-band wavelength (\u03bb \u2248 3.1 cm), paved asphalt taxiways, aprons, and graded caliche hardpan have root-mean-square surface roughness smaller than \u03bb / (8 sin \u03b8_grazing). Incoming microwave energy reflects specularly away from the satellite like a mirror, making smooth tarmac appear pitch black next to high-backscatter airframes."
+    }
+  ],
+  "guided_tour": [
+    {
+      "id": "overview",
+      "title": "309th AMARG Overview",
+      "caption": "Wide orbital perspective of the Davis-Monthan aircraft boneyard harmonized in UTM Zone 12N.",
+      "camera": [
+        0.0,
+        9.5,
+        13.5
+      ],
+      "target": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mode": "xray",
+      "wipe": 0.5,
+      "duration": 3200
+    },
+    {
+      "id": "dihedral-reflection",
+      "title": "Dihedral Corner Reflections",
+      "caption": "Zooming into high-intensity X-band double-bounce returns along heavy bomber and transport rows.",
+      "camera": [
+        -1.809,
+        2.293,
+        5.253
+      ],
+      "target": [
+        -4.609,
+        0.193,
+        2.453
+      ],
+      "mode": "sar",
+      "wipe": 0.0,
+      "duration": 3600,
+      "annotationId": "dihedral-reflection"
+    },
+    {
+      "id": "radar-shadow-void",
+      "title": "Radar Shadow Geometry",
+      "caption": "Inspecting down-range radar shadow voids cast by vertical stabilizers under oblique illumination.",
+      "camera": [
+        1.774,
+        2.193,
+        5.843
+      ],
+      "target": [
+        4.274,
+        0.293,
+        3.343
+      ],
+      "mode": "xray",
+      "wipe": 0.52,
+      "duration": 3600,
+      "annotationId": "radar-shadow-void"
+    },
+    {
+      "id": "specular-ground-scatter",
+      "title": "Specular Tarmac & Desert Hardpan",
+      "caption": "Comparing optical high-albedo concrete aprons against pitch-black specular SAR returns.",
+      "camera": [
+        2.467,
+        1.992,
+        1.248
+      ],
+      "target": [
+        -0.033,
+        0.192,
+        3.748
+      ],
+      "mode": "optical",
+      "wipe": 1.0,
+      "duration": 3600,
+      "annotationId": "specular-ground-scatter"
+    }
+  ]
+}
